@@ -1,5 +1,7 @@
 package mochineko.java_discord_bot;
 
+import mochineko.java_discord_bot.commands.MusicCommand;
+import mochineko.java_discord_bot.listener.ButtonListener;
 import net.dv8tion.jda.api.JDA;
 import net.dv8tion.jda.api.JDABuilder;
 import net.dv8tion.jda.api.hooks.ListenerAdapter;
@@ -19,10 +21,20 @@ public class Main extends ListenerAdapter {
         if (jda == null) {
             jda = JDABuilder.createDefault("")
                     .addEventListeners(new Main())
+                    .addEventListeners(new MusicCommand())
+                    .addEventListeners(new ButtonListener())
                     .build();
             jda.awaitReady();
 
             jda.updateCommands()
+                    .addCommands(Commands.slash("play", "音楽を再生するコマンド")
+                            .addOption(OptionType.STRING, "url", "再生したいURL　もしくは　再生したいキーワード", true))
+                    .addCommands(Commands.slash("play-info", "再生情報を表示するコマンド"))
+                    .addCommands(Commands.slash("skip", "音楽をスキップするコマンド"))
+                    .addCommands(Commands.slash("volume", "音楽の音量を設定するコマンド")
+                            .addOption(OptionType.INTEGER, "volume", "音量"))
+                    .addCommands(Commands.slash("select-track", "再生したいトラックを選ぶ")
+                            .addOption(OptionType.INTEGER, "index", "再生したいトラック", true))
                     .queue();
         }
     }
