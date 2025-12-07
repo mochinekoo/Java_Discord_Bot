@@ -1,5 +1,12 @@
 {
   "bot": {
     "token": ""
+  },
+  "database": {
+    "host": "",
+    "port": "",
+    "db_name": "",
+    "user_id": "",
+    "user_password": ""
   }
 }
