@@ -2,6 +2,7 @@ package mochineko.java_discord_bot;
 
 import mochineko.java_discord_bot.commands.MusicCommand;
 import mochineko.java_discord_bot.commands.UserCommand;
+import mochineko.java_discord_bot.commands.YoutubeCommand;
 import mochineko.java_discord_bot.listener.ButtonListener;
 import mochineko.java_discord_bot.manager.json.ConfigJson;
 import mochineko.java_discord_bot.manager.json.DeserializedJson;
@@ -43,6 +44,7 @@ public class Main extends ListenerAdapter {
                 .addEventListeners(new MusicCommand())
                 .addEventListeners(new ButtonListener())
                 .addEventListeners(new UserCommand())
+                .addEventListeners(new YoutubeCommand())
                 .build();
         try {
             jda.awaitReady();
@@ -59,6 +61,7 @@ public class Main extends ListenerAdapter {
                         .addOption(OptionType.INTEGER, "volume", "音量"))
                 .addCommands(Commands.slash("select-track", "再生したいトラックを選ぶ")
                         .addOption(OptionType.INTEGER, "index", "再生したいトラック", true))
+                .addCommands(Commands.slash("youtube_search", "Youtubeを検索するコマンド"))
                 .addCommands(Commands.slash("user_info", "aa")
                         .addOption(OptionType.STRING, "database", "aa"))
                 .queue();

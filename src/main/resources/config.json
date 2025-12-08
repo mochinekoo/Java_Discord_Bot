@@ -2,6 +2,12 @@
   "bot": {
     "token": ""
   },
+  "api": {
+    "youtube_data_api": {
+      "apiKey": "",
+      "channelID": ""
+    }
+  },
   "database": {
     "host": "",
     "port": "",
