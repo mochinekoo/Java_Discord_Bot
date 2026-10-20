@@ -1,0 +1,52 @@
+package mochineko.java_discord_bot.commands;
+
+import mochineko.java_discord_bot.api.P2PEarthquakeAPI;
+import mochineko.java_discord_bot.manager.music.MusicManager;
+import mochineko.java_discord_bot.status.EarthquakeScaleType;
+import net.dv8tion.jda.api.EmbedBuilder;
+import net.dv8tion.jda.api.entities.channel.unions.MessageChannelUnion;
+import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent;
+import net.dv8tion.jda.api.hooks.ListenerAdapter;
+
+import java.awt.*;
+import java.util.*;
+import java.util.List;
+
+public class EarthquakeCommand extends ListenerAdapter {
+
+    @Override
+    public void onSlashCommandInteraction(SlashCommandInteractionEvent event) {
+        String cmd = event.getName();
+        MessageChannelUnion channel = event.getChannel();
+        P2PEarthquakeAPI[] earthquakeAPIList = P2PEarthquakeAPI.GetAPI();
+
+        if ("history_earthquake".equalsIgnoreCase(cmd)) {
+            P2PEarthquakeAPI earthquakeAPI = earthquakeAPIList[0];
+            EmbedBuilder embed = new EmbedBuilder();
+            if (earthquakeAPI == null) {
+                embed.setTitle("エラー");
+                embed.addField("", "地震情報の取得に失敗しました", true);
+                embed.setColor(Color.RED);
+                channel.sendMessageEmbeds(embed.build()).queue();
+            }
+            else {
+                P2PEarthquakeAPI.Earthquake earthquake = earthquakeAPI.getEarthquake();
+                P2PEarthquakeAPI.Point[] pointList = earthquakeAPI.getPoints();
+                var scalePointMap = earthquakeAPI.getScaleMap();
+
+                embed.setTitle("過去の地震情報");
+                embed.addField("発生時刻", earthquake.getTime(), false);
+                for (Map.Entry<EarthquakeScaleType, List<P2PEarthquakeAPI.Point>> entry : scalePointMap.entrySet()) {
+                    EarthquakeScaleType scaleType = entry.getKey();
+                    List<String> pointAddr = entry.getValue().stream().map(P2PEarthquakeAPI.Point::getAddr).toList();
+                    String pointText = String.join(",", pointAddr);
+                    embed.addField(scaleType.getName(), pointText, true);
+                }
+                embed.setColor(Color.GREEN);
+                event.replyEmbeds(embed.build()).queue();
+            }
+
+        }
+    }
+
+}
