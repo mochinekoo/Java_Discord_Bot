@@ -19,11 +19,12 @@ import com.sedmelluq.discord.lavaplayer.track.AudioTrack;
 import com.sedmelluq.discord.lavaplayer.track.AudioTrackInfo;
 import dev.lavalink.youtube.YoutubeAudioSourceManager;
 import net.dv8tion.jda.api.EmbedBuilder;
+import net.dv8tion.jda.api.components.actionrow.ActionRow;
+import net.dv8tion.jda.api.components.buttons.Button;
 import net.dv8tion.jda.api.entities.Guild;
 import net.dv8tion.jda.api.entities.channel.concrete.TextChannel;
 import net.dv8tion.jda.api.entities.channel.concrete.VoiceChannel;
 import net.dv8tion.jda.api.entities.emoji.Emoji;
-import net.dv8tion.jda.api.interactions.components.buttons.Button;
 import net.dv8tion.jda.api.managers.AudioManager;
 
 import java.awt.*;
@@ -122,11 +123,11 @@ public class MusicManager {
                     }
                     embed.setColor(Color.GREEN);
                     channel.sendMessageEmbeds(embed.build())
-                            .addActionRow(get_size >= 1 ? Button.primary("button_1", "1") : Button.primary("button_1", "1").asDisabled(),
+                            .addComponents(ActionRow.of(get_size >= 1 ? Button.primary("button_1", "1") : Button.primary("button_1", "1").asDisabled(),
                                     get_size >= 2 ? Button.primary("button_2", "2") : Button.primary("button_2", "2").asDisabled(),
                                     get_size >= 3 ? Button.primary("button_3", "3") : Button.primary("button_3", "3").asDisabled(),
                                     get_size >= 4 ? Button.primary("button_4", "4") : Button.primary("button_4", "4").asDisabled(),
-                                    get_size == 5 ? Button.primary("button_5", "5") : Button.primary("button_5", "5").asDisabled())
+                                    get_size == 5 ? Button.primary("button_5", "5") : Button.primary("button_5", "5").asDisabled()))
                             .complete();
                 }
                 else {

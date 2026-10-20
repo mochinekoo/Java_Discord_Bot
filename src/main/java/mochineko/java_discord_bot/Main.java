@@ -1,5 +1,6 @@
 package mochineko.java_discord_bot;
 
+import mochineko.java_discord_bot.commands.EarthquakeCommand;
 import mochineko.java_discord_bot.commands.MusicCommand;
 import mochineko.java_discord_bot.commands.UserCommand;
 import mochineko.java_discord_bot.commands.YoutubeCommand;
@@ -45,6 +46,7 @@ public class Main extends ListenerAdapter {
                 .addEventListeners(new ButtonListener())
                 .addEventListeners(new UserCommand())
                 .addEventListeners(new YoutubeCommand())
+                .addEventListeners(new EarthquakeCommand())
                 .build();
         try {
             jda.awaitReady();
@@ -64,6 +66,7 @@ public class Main extends ListenerAdapter {
                 .addCommands(Commands.slash("youtube_search", "Youtubeを検索するコマンド"))
                 .addCommands(Commands.slash("user_info", "aa")
                         .addOption(OptionType.STRING, "database", "aa"))
+                .addCommands(Commands.slash("history_earthquake", "地震情報の履歴を表示するコマンド"))
                 .queue();
     }
 
