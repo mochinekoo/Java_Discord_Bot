@@ -1,8 +1,11 @@
 package mochineko.java_discord_bot.commands;
 
+import mochineko.java_discord_bot.api.P2PEEWAPI;
 import mochineko.java_discord_bot.api.P2PEarthquakeAPI;
+import mochineko.java_discord_bot.api.P2PTsunamiAPI;
 import mochineko.java_discord_bot.manager.music.MusicManager;
 import mochineko.java_discord_bot.status.EarthquakeScaleType;
+import mochineko.java_discord_bot.status.TsunamiGrade;
 import net.dv8tion.jda.api.EmbedBuilder;
 import net.dv8tion.jda.api.entities.channel.unions.MessageChannelUnion;
 import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent;
@@ -46,6 +49,30 @@ public class EarthquakeCommand extends ListenerAdapter {
                 event.replyEmbeds(embed.build()).queue();
             }
 
+        }
+        else if ("history_tsunami".equalsIgnoreCase(cmd)) {
+            EmbedBuilder embed = new EmbedBuilder();
+            P2PTsunamiAPI[] tsunamiAPIList = P2PTsunamiAPI.getAPI();
+            P2PTsunamiAPI tsunamiAPI = tsunamiAPIList[0];
+            if (tsunamiAPI == null) {
+                embed.setTitle("エラー");
+                embed.addField("", "津波情報の取得に失敗しました", true);
+                embed.setColor(Color.RED);
+                channel.sendMessageEmbeds(embed.build()).queue();
+            }
+            else {
+                embed.setTitle("過去の津波情報");
+                Map<TsunamiGrade, List<P2PTsunamiAPI.Area>> areaGradeMap = tsunamiAPI.getGradeMap();
+                for (Map.Entry<TsunamiGrade, List<P2PTsunamiAPI.Area>> entry : areaGradeMap.entrySet()) {
+                    TsunamiGrade grade = entry.getKey();
+                    //List<P2PTsunamiAPI.Area> areaList = entry.getValue();
+                    List<String> areaNameList = entry.getValue().stream().map(P2PTsunamiAPI.Area::getName).toList();
+                    String areaNameText = String.join(",", areaNameList);
+                    embed.addField(grade.getName(), areaNameText, true);
+                }
+
+                channel.sendMessageEmbeds(embed.build()).queue();
+            }
         }
     }
 

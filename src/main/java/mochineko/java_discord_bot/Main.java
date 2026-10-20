@@ -67,6 +67,7 @@ public class Main extends ListenerAdapter {
                 .addCommands(Commands.slash("user_info", "aa")
                         .addOption(OptionType.STRING, "database", "aa"))
                 .addCommands(Commands.slash("history_earthquake", "地震情報の履歴を表示するコマンド"))
+                .addCommands(Commands.slash("history_tsunami", "津波情報の履歴を表示するコマンド"))
                 .queue();
     }
 
