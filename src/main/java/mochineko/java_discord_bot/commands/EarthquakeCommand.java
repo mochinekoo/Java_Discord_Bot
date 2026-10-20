@@ -74,6 +74,39 @@ public class EarthquakeCommand extends ListenerAdapter {
                 channel.sendMessageEmbeds(embed.build()).queue();
             }
         }
+        else if ("history_eew".equalsIgnoreCase(cmd)) {
+            EmbedBuilder embed = new EmbedBuilder();
+            P2PEEWAPI[] eewAPIList = P2PEEWAPI.getAPI();
+            if (eewAPIList == null) {
+                embed.setTitle("エラー");
+                embed.addField("", "緊急地震速報の取得に失敗しました", true);
+                embed.setColor(Color.RED);
+                channel.sendMessageEmbeds(embed.build()).queue();
+            }
+            else {
+                P2PEEWAPI eewapi = eewAPIList[1];
+                var earthquake = eewapi.getEarthquake();
+                if (earthquake != null) {
+                    var earthquakeArrivalTime = earthquake.getArrivalTime();
+                    var hypocenter = earthquake.getHypocenter();
+
+                    embed.setTitle("過去の緊急地震速報");
+                    embed.addField("地震発生時刻", earthquakeArrivalTime, true);
+                    embed.addField("地震", hypocenter.getName() + "," + hypocenter.getDepth() + "," + hypocenter.getMagnitude(), true);
+                }
+
+                var areaList = eewapi.getAreas();
+                for (int i = 0; i < 20; i++) {
+                    var area = areaList[i];
+                    String name = area.getName();
+                    String arrivalTime = area.getArrivalTime();
+                    int scaleFrom = area.getScaleFrom();
+                    int scaleTo = area.getScaleTo();
+                    embed.addField(name, arrivalTime + "," + scaleFrom + ":" + scaleTo, true);
+                }
+                channel.sendMessageEmbeds(embed.build()).queue();
+            }
+        }
     }
 
 }
