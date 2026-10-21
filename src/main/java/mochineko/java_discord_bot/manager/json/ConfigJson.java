@@ -7,6 +7,7 @@ public class ConfigJson implements DeserializedJson {
     private Bot bot;
     private DataBase database;
     private WebAPI api;
+    private Earthquake earthquake;
 
     public Bot getBotSetting() {
         return bot;
@@ -20,12 +21,20 @@ public class ConfigJson implements DeserializedJson {
         return api;
     }
 
+    public Earthquake getEarthquake() {return  earthquake;}
+
     public static class Bot {
         private String token;
 
         public String getToken() {
             return token;
         }
+    }
+
+    public static class Earthquake {
+        private String sendChannelID;
+
+        public String getSendChannelID() {return sendChannelID;}
     }
 
     public static class WebAPI {

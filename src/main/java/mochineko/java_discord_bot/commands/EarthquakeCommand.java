@@ -3,7 +3,6 @@ package mochineko.java_discord_bot.commands;
 import mochineko.java_discord_bot.api.P2PEEWAPI;
 import mochineko.java_discord_bot.api.P2PEarthquakeAPI;
 import mochineko.java_discord_bot.api.P2PTsunamiAPI;
-import mochineko.java_discord_bot.manager.music.MusicManager;
 import mochineko.java_discord_bot.status.EarthquakeScaleType;
 import mochineko.java_discord_bot.status.TsunamiGrade;
 import net.dv8tion.jda.api.EmbedBuilder;

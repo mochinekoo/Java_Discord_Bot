@@ -8,14 +8,20 @@ import javax.net.ssl.HttpsURLConnection;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.net.URI;
 import java.net.URL;
+import java.net.http.HttpClient;
+import java.net.http.WebSocket;
 import java.nio.charset.StandardCharsets;
-import java.time.Duration;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionStage;
+import java.util.concurrent.ExecutionException;
 
 public class P2PEEWAPI {
 
+    public static final String API_URL = "https://api.p2pquake.net/v2/history?codes=556";
     private final static Gson gson = new Gson();
 
     private Area[] areas;
@@ -23,7 +29,7 @@ public class P2PEEWAPI {
 
     public static P2PEEWAPI[] getAPI() {
         try {
-            URL url = new URL("https://api.p2pquake.net/v2/history?codes=556");
+            URL url = new URL(API_URL);
             HttpsURLConnection con = (HttpsURLConnection)url.openConnection();
             con.setRequestMethod("GET");
             BufferedReader in = new BufferedReader(new InputStreamReader(con.getInputStream(), StandardCharsets.UTF_8));
@@ -41,6 +47,33 @@ public class P2PEEWAPI {
             ioException.printStackTrace();
         }
         return null;
+    }
+
+    public static void startWebSockAPI(WebSocket.Listener listener) {
+        try (HttpClient httpClient = HttpClient.newHttpClient();){
+            WebSocket.Builder wsb = httpClient.newWebSocketBuilder();
+
+            /*
+            new WebSocket.Listener() {
+                @Override
+                public void onOpen(WebSocket webSocket) {
+                    webSocket.request(10);
+                }
+                @Override
+                public CompletionStage<?> onText(WebSocket webSocket, CharSequence data, boolean last) {
+                    System.out.println("onText");
+                    System.out.println(data);
+                    webSocket.request(1);
+                    return null;
+                }
+            };
+             */
+
+            CompletableFuture<WebSocket> comp = wsb.buildAsync(URI.create("wss://api.p2pquake.net/v2/ws?codes=556"), listener);
+            WebSocket webSocket = comp.get();
+        } catch (ExecutionException | InterruptedException e) {
+            throw new RuntimeException(e);
+        }
     }
 
     @Nullable

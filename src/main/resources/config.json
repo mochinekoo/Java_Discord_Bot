@@ -8,6 +8,9 @@
       "channelID": ""
     }
   },
+  "earthquake": {
+    "sendChannelID": ""
+  },
   "database": {
     "host": "",
     "port": "",
