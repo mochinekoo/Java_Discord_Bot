@@ -1,6 +1,7 @@
 package mochineko.java_discord_bot.api;
 
 import com.google.gson.Gson;
+import mochineko.java_discord_bot.Main;
 import mochineko.java_discord_bot.status.EarthquakeScaleType;
 import org.jetbrains.annotations.Nullable;
 
@@ -13,20 +14,25 @@ import java.net.URL;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
+import java.net.http.WebSocket;
 import java.nio.charset.StandardCharsets;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeFormatterBuilder;
 import java.time.temporal.ChronoField;
 import java.util.*;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
 
 public class P2PEarthquakeAPI {
 
     private final static Gson gson = new Gson();
+    private static final HttpClient httpClient = HttpClient.newHttpClient();
 
     private Earthquake earthquake;
     private Point[] points;
     private String time;
+    private int code;
 
     public static P2PEarthquakeAPI[] GetAPI() {
         try {
@@ -49,6 +55,15 @@ public class P2PEarthquakeAPI {
         }
 
         return null;
+    }
+
+    public static void startWebSockAPI(WebSocket.Listener listener) {
+        httpClient.newWebSocketBuilder()
+                .buildAsync(URI.create("wss://api.p2pquake.net/v2/ws?codes=551"), listener)
+                .exceptionally(e -> {
+                    Main.logger.warning("地震速報APIの接続に失敗しました。");
+                    return null;
+                });
     }
 
     public Earthquake getEarthquake() {
@@ -74,6 +89,7 @@ public class P2PEarthquakeAPI {
     public String getTime() {
         return time;
     }
+    public int getCode() { return code; }
 
     public LocalDateTime getLocalDateTime() {
         DateTimeFormatter formatter = new DateTimeFormatterBuilder()

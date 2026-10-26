@@ -5,14 +5,29 @@ import mochineko.java_discord_bot.api.P2PEarthquakeAPI;
 import mochineko.java_discord_bot.api.P2PTsunamiAPI;
 import mochineko.java_discord_bot.status.EarthquakeScaleType;
 import mochineko.java_discord_bot.status.TsunamiGrade;
+import mochineko.java_discord_bot.util.DrawMapBuilder;
+import mochineko.java_discord_bot.util.MapBuilder;
 import net.dv8tion.jda.api.EmbedBuilder;
 import net.dv8tion.jda.api.entities.channel.unions.MessageChannelUnion;
 import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent;
 import net.dv8tion.jda.api.hooks.ListenerAdapter;
+import net.dv8tion.jda.api.utils.FileUpload;
+import org.checkerframework.checker.nullness.qual.Nullable;
+import org.geotools.api.data.SimpleFeatureSource;
+import org.geotools.api.filter.Filter;
+import org.geotools.api.filter.FilterFactory;
+import org.geotools.api.filter.expression.PropertyName;
+import org.geotools.data.simple.SimpleFeatureIterator;
+import org.geotools.factory.CommonFactoryFinder;
 
+import javax.imageio.ImageIO;
 import java.awt.*;
+import java.awt.image.BufferedImage;
+import java.io.*;
 import java.util.*;
 import java.util.List;
+
+import static mochineko.java_discord_bot.util.DrawMapBuilder.EEW_MAP_FILE;
 
 public class EarthquakeCommand extends ListenerAdapter {
 
@@ -33,7 +48,6 @@ public class EarthquakeCommand extends ListenerAdapter {
             }
             else {
                 P2PEarthquakeAPI.Earthquake earthquake = earthquakeAPI.getEarthquake();
-                P2PEarthquakeAPI.Point[] pointList = earthquakeAPI.getPoints();
                 var scalePointMap = earthquakeAPI.getScaleMap();
 
                 embed.setTitle("過去の地震情報");
@@ -46,6 +60,67 @@ public class EarthquakeCommand extends ListenerAdapter {
                 }
                 embed.setColor(Color.GREEN);
                 event.replyEmbeds(embed.build()).queue();
+
+                new Thread(() -> {
+                    long t = System.nanoTime();
+                    FilterFactory filter_factory = CommonFactoryFinder.getFilterFactory();
+                    PropertyName nameProperty = filter_factory.property("regionname".trim());
+                    Set<String> prefSet = new LinkedHashSet<>();
+                    try {
+                        P2PEarthquakeAPI api = P2PEarthquakeAPI.GetAPI()[0];
+                        P2PEarthquakeAPI.Earthquake earthquake1 = api.getEarthquake();
+                        var hy = earthquake1.getHypocenter();
+                        Map<Color, List<Filter>> drawColorMap = new HashMap<>();
+                        for (var entry : api.getScaleMap().entrySet()) {
+                            EarthquakeScaleType scaleType = entry.getKey();
+
+                            if (!drawColorMap.containsKey(scaleType.getColor())) {
+                                drawColorMap.put(scaleType.getColor(), new ArrayList<>());
+                            }
+
+                            for (P2PEarthquakeAPI.Point point : entry.getValue()) {
+                                var colorFilter = drawColorMap.get(scaleType.getColor());
+                                String pref = point.getPref();
+                                String addr = point.getAddr();
+                                String addrSplit = "";
+                                if (addr.contains("市")) {
+                                    addrSplit = addr.substring(0, addr.indexOf("市") + 1);
+                                }
+                                else if (addr.contains("町")) {
+                                    addrSplit = addr.substring(0, addr.indexOf("町") + 1);
+                                }
+                                else if (addr.contains("村")) {
+                                    addrSplit = addr.substring(0, addr.indexOf("村") + 1);
+                                }
+                                else if (addr.contains("区")) {
+                                    addrSplit = addr.substring(0, addr.indexOf("区") + 1);
+                                }
+                                String format = (pref + addrSplit).trim();
+                                prefSet.add(pref.trim());
+
+                                System.out.println(pref + "\n" + addr + "\n" + addrSplit + "\n" + format);
+
+                                colorFilter.add(filter_factory.equals(nameProperty, filter_factory.literal(format)));
+                            }
+                        }
+
+                        List<Filter> filterList = prefSet.stream()
+                                .<Filter>map(p -> filter_factory.equals(filter_factory.property("name"), filter_factory.literal(p)))
+                                .toList();
+                        var map = DrawMapBuilder.createCityMap(filterList, drawColorMap, Color.WHITE, null);
+                        map.addImage(new File("point.png"), hy.getLatitude(), hy.getLongitude());
+                        BufferedImage image = map.build();
+                        File file = new File("tsunami.png");
+                        ImageIO.write(image, "png", file);
+
+                        //ByteArrayOutputStream os = new ByteArrayOutputStream();
+                        //ImageIO.write(image, "png", os);
+                        //InputStream is = new ByteArrayInputStream(os.toByteArray());
+                        channel.sendFiles(FileUpload.fromData(file)).queue();
+                    } catch (IOException e) {
+                        throw new RuntimeException(e);
+                    }
+                }).start();
             }
 
         }

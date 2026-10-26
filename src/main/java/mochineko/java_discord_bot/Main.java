@@ -2,6 +2,7 @@ package mochineko.java_discord_bot;
 
 import com.google.gson.Gson;
 import mochineko.java_discord_bot.api.P2PEEWAPI;
+import mochineko.java_discord_bot.api.P2PEarthquakeAPI;
 import mochineko.java_discord_bot.commands.EarthquakeCommand;
 import mochineko.java_discord_bot.commands.MusicCommand;
 import mochineko.java_discord_bot.commands.UserCommand;
@@ -10,7 +11,9 @@ import mochineko.java_discord_bot.listener.ButtonListener;
 import mochineko.java_discord_bot.manager.json.ConfigJson;
 import mochineko.java_discord_bot.manager.json.DeserializedJson;
 import mochineko.java_discord_bot.manager.json.JsonManager;
+import mochineko.java_discord_bot.status.EarthquakeScaleType;
 import mochineko.java_discord_bot.status.FileType;
+import mochineko.java_discord_bot.util.DrawMapBuilder;
 import net.dv8tion.jda.api.EmbedBuilder;
 import net.dv8tion.jda.api.JDA;
 import net.dv8tion.jda.api.JDABuilder;
@@ -22,7 +25,10 @@ import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.net.http.WebSocket;
+import java.nio.ByteBuffer;
 import java.sql.SQLException;
+import java.util.List;
+import java.util.Map;
 import java.util.concurrent.CompletionStage;
 import java.util.logging.Logger;
 
@@ -30,6 +36,7 @@ public class Main extends ListenerAdapter {
 
     public static final Gson gson = new Gson();
     public static final Logger logger = Logger.getLogger("java_discordBot");
+    private static final org.slf4j.Logger log = LoggerFactory.getLogger(Main.class);
     private static JDA jda;
 
     public static void main(String[] strings) {
@@ -62,6 +69,7 @@ public class Main extends ListenerAdapter {
             throw new RuntimeException(e);
         }
 
+        DrawMapBuilder.Init();
         startEarthquakeService();
 
         jda.updateCommands()
@@ -84,23 +92,72 @@ public class Main extends ListenerAdapter {
 
     public static void startEarthquakeService() {
         JsonManager jsonManager = new JsonManager(FileType.CONFIG);
-        P2PEEWAPI.startWebSockAPI(new WebSocket.Listener() {
+        ConfigJson configJson = (ConfigJson) jsonManager.getDeserializedJson();
+        ConfigJson.Earthquake earthquakeConfig = configJson.getEarthquake();
+        String sendChannelID = earthquakeConfig.getSendChannelID();
+
+        P2PEarthquakeAPI.startWebSockAPI(new WebSocket.Listener() {
             @Override
             public void onOpen(WebSocket webSocket) {
-                logger.info("緊急地震速報のAPIに接続されました。");
-                webSocket.request(10);
+                webSocket.request(1);
+                logger.info("地震速報APIの接続に成功しました");
+            }
+            @Override
+            public CompletionStage<?> onClose(WebSocket webSocket, int statusCode, String reason) {
+                logger.warning("接続に閉じられました：" + statusCode + "(" + reason + ")");
+                return null;
+            }
+            @Override
+            public void onError(WebSocket webSocket, Throwable error) {
+                webSocket.request(1);
+                logger.warning("APIの接続に問題が発生しました：" + error);
             }
             @Override
             public CompletionStage<?> onText(WebSocket webSocket, CharSequence data, boolean last) {
-                logger.info("緊急地震速報APIからの受信データ: " + data.toString());
+                webSocket.request(1);
+                P2PEarthquakeAPI api = gson.fromJson(data.toString(), P2PEarthquakeAPI.class);
 
-                ConfigJson configJson = (ConfigJson) jsonManager.getDeserializedJson();
-                ConfigJson.Earthquake earthquakeConfig = configJson.getEarthquake();
-                String sendChannelID = earthquakeConfig.getSendChannelID();
+                logger.info("地震速報APIからの受信データ: " + data.toString());
+                logger.info("送信するチャンネル：" + sendChannelID);
+
+                if (sendChannelID == null || sendChannelID.isEmpty()) {
+                    logger.warning("IDが設定されていません");
+                    return null;
+                }
+                if (api.getCode() == 555 || api.getCode() == 561 || api.getCode() == 9611) {
+                    logger.warning("受信対象外なため、サーバーには送られません：" + api.getCode());
+                    return null;
+                }
+
+                TextChannel channel = jda.getTextChannelById(sendChannelID);
+                channel.sendMessage(data.toString()).queue();
+
+                EmbedBuilder embed = new EmbedBuilder();
+                embed.addField("発生時刻", api.getTime(), false);
+                for (Map.Entry<EarthquakeScaleType, List<P2PEarthquakeAPI.Point>> entry : api.getScaleMap().entrySet()) {
+                    EarthquakeScaleType scaleType = entry.getKey();
+                    List<String> pointAddr = entry.getValue().stream().map(P2PEarthquakeAPI.Point::getAddr).toList();
+                    String pointText = String.join(",", pointAddr);
+                    embed.addField(scaleType.getName(), pointText, true);
+                }
+                channel.sendMessageEmbeds(embed.build()).queue();
+                return null;
+            }
+        });
+
+        P2PEEWAPI.startWebSockAPI(new WebSocket.Listener() {
+            @Override
+            public void onOpen(WebSocket webSocket) {
+                webSocket.request(10);
+                System.out.println("緊急地震速報のAPIに接続されました。");
+            }
+            @Override
+            public CompletionStage<?> onText(WebSocket webSocket, CharSequence data, boolean last) {
+                webSocket.request(5);
+                logger.info("緊急地震速報APIからの受信データ: " + data.toString());
                 if (sendChannelID == null || sendChannelID.isEmpty()) {
                     logger.warning("IDが設定されていません");
                 }
-
                 TextChannel channel = jda.getTextChannelById(sendChannelID);
                 P2PEEWAPI api = gson.fromJson(data.toString(), P2PEEWAPI.class);
                 EmbedBuilder embed = new EmbedBuilder();
@@ -125,7 +182,6 @@ public class Main extends ListenerAdapter {
                 }
                 channel.sendMessageEmbeds(embed.build()).queue();
 
-                webSocket.request(1);
                 return null;
             }
         });
