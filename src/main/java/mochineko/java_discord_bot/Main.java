@@ -3,10 +3,7 @@ package mochineko.java_discord_bot;
 import com.google.gson.Gson;
 import mochineko.java_discord_bot.api.P2PEEWAPI;
 import mochineko.java_discord_bot.api.P2PEarthquakeAPI;
-import mochineko.java_discord_bot.commands.EarthquakeCommand;
-import mochineko.java_discord_bot.commands.MusicCommand;
-import mochineko.java_discord_bot.commands.UserCommand;
-import mochineko.java_discord_bot.commands.YoutubeCommand;
+import mochineko.java_discord_bot.commands.*;
 import mochineko.java_discord_bot.listener.ButtonListener;
 import mochineko.java_discord_bot.manager.json.ConfigJson;
 import mochineko.java_discord_bot.manager.json.DeserializedJson;
@@ -62,6 +59,7 @@ public class Main extends ListenerAdapter {
                 .addEventListeners(new UserCommand())
                 .addEventListeners(new YoutubeCommand())
                 .addEventListeners(new EarthquakeCommand())
+                .addEventListeners(new WeatherCommand())
                 .build();
         try {
             jda.awaitReady();
@@ -87,6 +85,7 @@ public class Main extends ListenerAdapter {
                 .addCommands(Commands.slash("history_earthquake", "地震情報の履歴を表示するコマンド"))
                 .addCommands(Commands.slash("history_tsunami", "津波情報の履歴を表示するコマンド"))
                 .addCommands(Commands.slash("history_eew", "緊急地震速報の履歴を表示するコマンド"))
+                .addCommands(Commands.slash("weather", "天気を見るコマンド"))
                 .queue();
     }
 

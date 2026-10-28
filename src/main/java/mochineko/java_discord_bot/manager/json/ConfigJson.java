@@ -39,10 +39,13 @@ public class ConfigJson implements DeserializedJson {
 
     public static class WebAPI {
         private YoutubeDataAPI youtube_data_api;
+        private OpenWeather openweather;
 
         public WebAPI.YoutubeDataAPI getYoutubeDataAPISetting() {
             return youtube_data_api;
         }
+
+        public WebAPI.OpenWeather getOpenWeatherAPI() { return openweather;}
 
         public static class YoutubeDataAPI {
             private String apiKey;
@@ -54,6 +57,14 @@ public class ConfigJson implements DeserializedJson {
 
             public String getChannelID() {
                 return channelID;
+            }
+        }
+
+        public static class OpenWeather {
+            private String apiKey;
+
+            public String getAPIKey() {
+                return apiKey;
             }
         }
     }
