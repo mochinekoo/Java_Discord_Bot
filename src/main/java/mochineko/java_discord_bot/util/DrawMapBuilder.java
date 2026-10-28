@@ -142,14 +142,22 @@ public class DrawMapBuilder {
         String creditText = "※気象庁「市町村等（地震津波関係）」「府県予報区」を\n加工して利用しています。";
 
         Graphics2D graphics = (Graphics2D) bufferedImage.getGraphics();
-        Font font = new Font("SansSerif", Font.PLAIN, TEXT_SIZE);
-        GlyphVector glyphVector = font.createGlyphVector(graphics.getFontRenderContext(), creditText);
-        Shape outlineShape = glyphVector.getOutline(bufferedImage.getWidth() - (TEXT_SIZE * creditText.length()), 50);
-        graphics.setColor(Color.BLACK); //縁は黒色
-        graphics.setStroke(new BasicStroke(STROKE_SIZE)); //ふち取りのサイズを決定する
-        graphics.draw(outlineShape); //ふち取りのみを描画する
-        graphics.setColor(Color.WHITE); //文字の色は白
-        graphics.fill(outlineShape); //文字を埋める
+
+        String[] createSplit = creditText.split("\n");
+        int startY = 50;
+
+        for (int i = 0; i < createSplit.length; i++) {
+            String split = createSplit[i];
+            Font font = new Font("SansSerif", Font.PLAIN, TEXT_SIZE);
+            GlyphVector glyphVector = font.createGlyphVector(graphics.getFontRenderContext(), split);
+            Shape outlineShape = glyphVector.getOutline(bufferedImage.getWidth() - (TEXT_SIZE * split.length()), startY + (TEXT_SIZE * i));
+            graphics.setColor(Color.BLACK); //縁は黒色
+            graphics.setStroke(new BasicStroke(STROKE_SIZE)); //ふち取りのサイズを決定する
+            graphics.draw(outlineShape); //ふち取りのみを描画する
+            graphics.setColor(Color.WHITE); //文字の色は白
+            graphics.fill(outlineShape); //文字を埋める
+        }
+
     }
 
 }
