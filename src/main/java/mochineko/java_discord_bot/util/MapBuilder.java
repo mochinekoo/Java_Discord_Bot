@@ -16,9 +16,13 @@ import org.geotools.renderer.GTRenderer;
 import org.geotools.renderer.lite.RendererUtilities;
 import org.geotools.renderer.lite.StreamingRenderer;
 import org.geotools.styling.StyleBuilder;
+import org.locationtech.jts.geom.Coordinate;
+import org.locationtech.jts.geom.Envelope;
 
 import javax.imageio.ImageIO;
 import java.awt.*;
+import java.awt.Font;
+import java.awt.font.GlyphVector;
 import java.awt.geom.AffineTransform;
 import java.awt.geom.Point2D;
 import java.awt.image.BufferedImage;
@@ -152,6 +156,10 @@ public class MapBuilder {
         return image;
     }
 
+    public ReferencedEnvelope getEnvlope() {
+        return envelope;
+    }
+
     public MapBuilder setEnvelope(ReferencedEnvelope envelope) {
         this.envelope = envelope;
         System.out.println(featureSource.getName() + ":" + envelope);
@@ -233,6 +241,31 @@ public class MapBuilder {
             return features.getBounds();
         }
         return source.getBounds();
+    }
+
+    public static void addCredit(BufferedImage bufferedImage) {
+        final float STROKE_SIZE = 3.0f;
+        final int TEXT_SIZE = 15;
+        String creditText = "※気象庁「地震情報_細分区域」を加工して利用しています。";
+
+        Graphics2D graphics = (Graphics2D) bufferedImage.getGraphics();
+
+        String[] createSplit = creditText.split("\n");
+        int startY = 50;
+
+        for (int i = 0; i < createSplit.length; i++) {
+            String split = createSplit[i];
+            Font font = new Font("SansSerif", Font.PLAIN, TEXT_SIZE);
+            GlyphVector glyphVector = font.createGlyphVector(graphics.getFontRenderContext(), split);
+            //bufferedImage.getWidth() - (TEXT_SIZE * split.length())
+            Shape outlineShape = glyphVector.getOutline(10, startY + (TEXT_SIZE * i));
+            graphics.setColor(Color.BLACK); //縁は黒色
+            graphics.setStroke(new BasicStroke(STROKE_SIZE)); //ふち取りのサイズを決定する
+            graphics.draw(outlineShape); //ふち取りのみを描画する
+            graphics.setColor(Color.WHITE); //文字の色は白
+            graphics.fill(outlineShape); //文字を埋める
+        }
+
     }
 
 }

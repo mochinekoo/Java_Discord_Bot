@@ -10,15 +10,20 @@ import org.geotools.map.Layer;
 
 import javax.imageio.ImageIO;
 import java.awt.*;
-import java.awt.font.GlyphVector;
 import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.IOException;
+import java.lang.reflect.Array;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 
 public class DrawMapBuilder {
+
+    private static final int MAP_WIDTH = 800;
+    private static final int MAP_HEIGHT = 600;
+    private static final FilterFactory FILTER_FACTORY = CommonFactoryFinder.getFilterFactory();
 
     public static final File EEW_MAP_FILE = new File(".\\src\\main\\resources\\GIS\\AreaForecastLocalE_GIS\\地震情報_細分区域.shp");
     public static final File PREF_MAP_FILE = new File(".\\src\\main\\resources\\GIS\\AreaForecastLocalM_prefecture_GIS\\府県予報区等.shp");
@@ -34,179 +39,69 @@ public class DrawMapBuilder {
             EEW_SOURCE = MapBuilder.getFileFeatureSource(EEW_MAP_FILE);
             PREF_SOURCE = MapBuilder.getFileFeatureSource(PREF_MAP_FILE);
             CITY_SOURCE = MapBuilder.getFileFeatureSource(CITY_MAP_FILE);
-
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
     }
 
-    public static MapBuilder createEEWMap(List<Filter> draw_areaList, Map<EarthquakeScaleType, List<Filter>> draw_colormap, Color fill, Color stroke) {
-        var eewMap = new MapBuilder(EEW_SOURCE, 800, 600);
+    public static MapBuilder createMap(MapBuilder mapBuilder, List<Filter> drawAreaList, Map<Color, List<Filter>> drawColorMap) throws IOException {
+        var mapSource = mapBuilder.getMapFeatureSource();
 
-        if (fill != null) {
-            if (draw_colormap == null) {
-                eewMap.addFill(fill, 1f, null);
-            }
-            else {
-                FilterFactory filter_factory = CommonFactoryFinder.getFilterFactory();
-                for (var entry : draw_colormap.entrySet()) {
-                    var color = entry.getKey().getColor();
-                    Filter orFilter = filter_factory.or(entry.getValue());
-                    eewMap.addFill(color, 1f, orFilter);
-                }
+        if (drawColorMap != null) {
+            for (var drawColorEntry : drawColorMap.entrySet()) {
+                var color = drawColorEntry.getKey();
+                Filter filter = FILTER_FACTORY.or(drawColorEntry.getValue());
+                mapBuilder.addFill(color, 1f, filter);
             }
         }
 
-        try {
-            List<ReferencedEnvelope> envelope_list = new ArrayList<>();
-            if (draw_areaList != null) {
-                for (Filter filter : draw_areaList) {
-                    ReferencedEnvelope area = MapBuilder.getAreaEnvelope(eewMap.getMapFeatureSource(), filter); //都道府県ごとのReferencedEnvelopeを取得する
-                    envelope_list.add(area); //都道府県ごとのReferencedEnvelopeを追加
-                    //eewMap.addFill(Color.WHITE, 1.0f, filter);
-                    //eewMap.addStroke(Color.BLACK, 1f, filter);
-                }
-                eewMap.setDrawArea(envelope_list); //描画範囲を決定する
+        if (drawAreaList != null) {
+            List<ReferencedEnvelope> envelopeList = new ArrayList<>();
+            for (Filter filter : drawAreaList) {
+                ReferencedEnvelope area = MapBuilder.getAreaEnvelope(mapSource, filter);
+                envelopeList.add(area);
             }
-
-            var im = eewMap.getImage();
-            var gra = im.getGraphics();
-            var eewIm = eewMap.build();
-            File file = new File("eew1.png");
-
-            gra.drawImage(eewIm, 0, 0, null);
-            addCredit(im);
-
-            ImageIO.write(eewIm, "png", file);
-        } catch (IOException e) {
-            throw new RuntimeException(e);
+            mapBuilder.setDrawArea(envelopeList); //描画範囲を決定する
         }
 
-        return eewMap;
+        var buildImage = mapBuilder.build();
+        var image = mapBuilder.getImage();
+        var graphics = image.getGraphics();
+
+        graphics.drawImage(buildImage, 0, 0, null);
+        MapBuilder.addCredit(image);
+
+        File file = new File("eew1.png");
+        ImageIO.write(buildImage, "png", file);
+        return mapBuilder;
     }
 
-    public static MapBuilder createCityMap(List<Filter> draw_areaList, Map<Color, List<Filter>> draw_colormap, Color fill, Color stroke) throws IOException {
-        //府県予報区
-        var eewMap  = new MapBuilder(PREF_SOURCE, 800, 600);
-        var cityMap = new MapBuilder(CITY_SOURCE, 800, 600);
-        //cityMap.addStroke(Color.WHITE, 0.0f, null);
-
-        if (fill != null) {
-            if (draw_colormap == null) {
-                cityMap.addFill(fill, 1f, null);
-            }
-            else {
-                FilterFactory filter_factory = CommonFactoryFinder.getFilterFactory();
-                for (Map.Entry<Color, List<Filter>> entry : draw_colormap.entrySet()) {
-                    Color color = entry.getKey();
-                    Filter orFilter = filter_factory.or(entry.getValue());
-                    cityMap.addFill(color, 1f, orFilter);
-                }
-            }
-        }
-
-        List<ReferencedEnvelope> envelope_list = new ArrayList<>();
-        if (draw_areaList != null) {
-            for (Filter filter : draw_areaList) {
-                ReferencedEnvelope area = MapBuilder.getAreaEnvelope(eewMap.getMapFeatureSource(), filter); //都道府県ごとのReferencedEnvelopeを取得する
-                envelope_list.add(area); //都道府県ごとのReferencedEnvelopeを追加
-                eewMap.addFill(Color.WHITE, 1.0f, filter);
-                //eewMap.addStroke(Color.BLACK, 1f, filter);
-            }
-            cityMap.setDrawArea(envelope_list); //描画範囲を決定する
-        }
-
-        var im = cityMap.getImage();
-        var gra = im.getGraphics();
-        var eewIm = eewMap.build();
-        File file = new File("tsunamiaa.png");
-        ImageIO.write(eewIm, "png", file);
-        gra.drawImage(eewIm, 0, 0, null);
-        addCredit(im);
-
-        return cityMap;
+    public static MapBuilder createEEWMap(List<Filter> drawAreaList, Map<Color, List<Filter>> drawColorMap) throws IOException {
+        var eewMapBuilder = new MapBuilder(EEW_SOURCE, MAP_WIDTH, MAP_HEIGHT);
+        return createMap(eewMapBuilder, drawAreaList, drawColorMap);
     }
 
-    public static MapBuilder getPrefectureMap(List<Filter> draw_areaList, Map<Color, List<Filter>> draw_colormap, Color fill, Color stroke) throws IOException {
-        //府県予報区
-        MapBuilder eew_map = new MapBuilder(PREF_MAP_FILE, 800, 600);
-        if (fill != null) {
-            if (draw_colormap == null) {
-                eew_map.addFill(fill, 1f, null);
-            }
-            else {
-                for (Map.Entry<Color, List<Filter>> entry : draw_colormap.entrySet()) {
-                    Color color = entry.getKey();
-                    for (Filter filter : entry.getValue()) {
-                        eew_map.addFill(color, 1f, filter);
-                    }
-                }
-            }
-        }
-        if (stroke != null) eew_map.addStroke(stroke, 2f, null);
-        List<ReferencedEnvelope> envelope_list = new ArrayList<>();
-        if (draw_areaList != null) {
-            for (Filter filter : draw_areaList) {
-                ReferencedEnvelope area = MapBuilder.getAreaEnvelope(eew_map.getMapFeatureSource(), filter); //都道府県ごとのReferencedEnvelopeを取得する
-                envelope_list.add(area); //都道府県ごとのReferencedEnvelopeを追加
-            }
-            eew_map.setDrawArea(envelope_list); //描画範囲を決定する
-        }
-        System.out.println(envelope_list.toString());
+    public static BufferedImage createCityMap(List<Filter> drawAreaList, Map<Color, List<Filter>> drawColorMap, float latitude, float longitude) throws IOException {
+        var cityMapBuilder = new MapBuilder(CITY_SOURCE, MAP_WIDTH, MAP_HEIGHT);
+        var prefMapBuilder = new MapBuilder(PREF_SOURCE, MAP_WIDTH, MAP_HEIGHT);
+        var prefMapSource = prefMapBuilder.getMapFeatureSource();
 
-        return eew_map;
-    }
+        Filter filter = FILTER_FACTORY.or(drawAreaList);
+        ReferencedEnvelope envelope = MapBuilder.getAreaEnvelope(prefMapSource, filter);
+        envelope.expandToInclude(longitude, latitude);
+        envelope.expandBy(envelope.getWidth() * 0.1, envelope.getHeight() * 0.1);
+        prefMapBuilder.setDrawArea(Arrays.asList(envelope));
+        prefMapBuilder.addFill(Color.WHITE, 1.0f, null);
+        prefMapBuilder.addStroke(Color.BLACK, 0.5f, null);
 
-    public static BufferedImage createCustomTsunamiMap(List<Filter> draw_areaList, Map<Color, List<Filter>> draw_colormap) throws IOException {
-        MapBuilder prefecture_map = getPrefectureMap(draw_areaList, null, Color.LIGHT_GRAY, null); //府県予報区
-        BufferedImage prefecture_image = prefecture_map.getImage();
+        var prefImage = prefMapBuilder.build();
+        var cityImage = createMap(cityMapBuilder, drawAreaList, drawColorMap)
+                .setDrawArea(Arrays.asList(envelope))
+                .addImage(new File("point.png"), latitude, longitude)
+                .build();
+        prefImage.getGraphics().drawImage(cityImage, 0, 0, null);
 
-        //津波予報区
-        MapBuilder tsunami_map = new MapBuilder(TSUNAMI_MAP_FILE, prefecture_image.getWidth(), prefecture_image.getHeight())
-                .addStroke(Color.LIGHT_GRAY, 3f, null); //全部に色を塗る
-        for (Map.Entry<Color, List<Filter>> entry : draw_colormap.entrySet()) {
-            Color color = entry.getKey(); //色
-            List<Filter> values = entry.getValue(); //津波のタイプごとのフィルダーリスト（塗りたい場所）
-            for (Filter filter : values) {
-                tsunami_map.addStroke(color, 2f, filter); //津波のタイプごとに色を塗る
-            }
-        }
-
-        List<Layer> layers = tsunami_map.getMap().layers(); //津波GISから、レイヤーリストを取得する
-        for (int n = 1; n < layers.size(); n++) {
-            prefecture_map.getMap().addLayer(layers.get(n)); //府県予報区等GISに、津波GISレイヤーを追加する（ふち取りがある状態に）
-        }
-
-        BufferedImage buildImage = prefecture_map.build();
-        Graphics2D graphics = (Graphics2D) buildImage.getGraphics();
-        graphics.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON); //アンチエイリアシング
-        addCredit(buildImage);
-        return buildImage;
-    }
-
-    public static void addCredit(BufferedImage bufferedImage) {
-        final float STROKE_SIZE = 3.0f;
-        final int TEXT_SIZE = 15;
-        String creditText = "※気象庁「地震情報_細分区域」を加工して利用しています。";
-
-        Graphics2D graphics = (Graphics2D) bufferedImage.getGraphics();
-
-        String[] createSplit = creditText.split("\n");
-        int startY = 50;
-
-        for (int i = 0; i < createSplit.length; i++) {
-            String split = createSplit[i];
-            Font font = new Font("SansSerif", Font.PLAIN, TEXT_SIZE);
-            GlyphVector glyphVector = font.createGlyphVector(graphics.getFontRenderContext(), split);
-            //bufferedImage.getWidth() - (TEXT_SIZE * split.length())
-            Shape outlineShape = glyphVector.getOutline(10, startY + (TEXT_SIZE * i));
-            graphics.setColor(Color.BLACK); //縁は黒色
-            graphics.setStroke(new BasicStroke(STROKE_SIZE)); //ふち取りのサイズを決定する
-            graphics.draw(outlineShape); //ふち取りのみを描画する
-            graphics.setColor(Color.WHITE); //文字の色は白
-            graphics.fill(outlineShape); //文字を埋める
-        }
-
+        return prefImage;
     }
 
 }

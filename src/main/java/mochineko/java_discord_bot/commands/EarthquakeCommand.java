@@ -62,7 +62,7 @@ public class EarthquakeCommand extends ListenerAdapter {
                     PropertyName nameProperty = filter_factory.property("regionname".trim());
                     Set<String> prefSet = new LinkedHashSet<>();
                     try {
-                        P2PEarthquakeAPI api = P2PEarthquakeAPI.GetAPI()[0];
+                        P2PEarthquakeAPI api = P2PEarthquakeAPI.GetAPI()[2];
                         P2PEarthquakeAPI.Earthquake earthquake1 = api.getEarthquake();
                         var hy = earthquake1.getHypocenter();
                         Map<Color, List<Filter>> drawColorMap = new HashMap<>();
@@ -102,11 +102,10 @@ public class EarthquakeCommand extends ListenerAdapter {
                         List<Filter> filterList = prefSet.stream()
                                 .<Filter>map(p -> filter_factory.equals(filter_factory.property("name"), filter_factory.literal(p)))
                                 .toList();
-                        var map = DrawMapBuilder.createCityMap(filterList, drawColorMap, Color.WHITE, null);
-                        map.addImage(new File("point.png"), hy.getLatitude(), hy.getLongitude());
-                        BufferedImage image = map.build();
+                        var map = DrawMapBuilder.createCityMap(filterList, drawColorMap, hy.getLatitude(), hy.getLongitude());
+                        //BufferedImage image = map.build();
                         File file = new File("tsunami.png");
-                        ImageIO.write(image, "png", file);
+                        ImageIO.write(map, "png", file);
 
                         //ByteArrayOutputStream os = new ByteArrayOutputStream();
                         //ImageIO.write(image, "png", os);
@@ -182,7 +181,7 @@ public class EarthquakeCommand extends ListenerAdapter {
                         P2PEEWAPI api = P2PEEWAPI.getAPI()[1];
                         var earthquake1 = api.getEarthquake();
                         //var hy = earthquake1.getHypocenter();
-                        Map<EarthquakeScaleType, List<Filter>> drawColorMap = new HashMap<>();
+                        Map<Color, List<Filter>> drawColorMap = new HashMap<>();
                         for (var area : api.getAreas()) {
                             var name = area.getName();
                             var fromScale = area.getScaleFrom();
@@ -190,16 +189,16 @@ public class EarthquakeCommand extends ListenerAdapter {
                             var fromConvertScale = EarthquakeScaleType.convertP2PAPI(fromScale);
                             var toConvertScale = EarthquakeScaleType.convertP2PAPI(toScale);
 
-                            if (!drawColorMap.containsKey(fromConvertScale)) {
-                                drawColorMap.put(fromConvertScale, new ArrayList<>());
+                            if (!drawColorMap.containsKey(fromConvertScale.getColor())) {
+                                drawColorMap.put(fromConvertScale.getColor(), new ArrayList<>());
                             }
-                            var drawFilter = drawColorMap.get(fromConvertScale);
+                            var drawFilter = drawColorMap.get(fromConvertScale.getColor());
 
                             drawFilter.add(filter_factory.equals(nameProperty, filter_factory.literal(name)));
                             prefSet.add(filter_factory.equals(nameProperty, filter_factory.literal(name)));
                         }
 
-                        var map = DrawMapBuilder.createEEWMap(prefSet, drawColorMap, Color.BLACK, null);
+                        var map = DrawMapBuilder.createEEWMap(prefSet, drawColorMap);
                         //map.addImage(new File("point.png"), hy.getLatitude(), hy.getLongitude());
                         BufferedImage image = map.build();
                         File file = new File("tsunami.png");
