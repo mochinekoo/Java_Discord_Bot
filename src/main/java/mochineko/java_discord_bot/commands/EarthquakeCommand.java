@@ -6,18 +6,14 @@ import mochineko.java_discord_bot.api.P2PTsunamiAPI;
 import mochineko.java_discord_bot.status.EarthquakeScaleType;
 import mochineko.java_discord_bot.status.TsunamiGrade;
 import mochineko.java_discord_bot.util.DrawMapBuilder;
-import mochineko.java_discord_bot.util.MapBuilder;
 import net.dv8tion.jda.api.EmbedBuilder;
 import net.dv8tion.jda.api.entities.channel.unions.MessageChannelUnion;
 import net.dv8tion.jda.api.events.interaction.command.SlashCommandInteractionEvent;
 import net.dv8tion.jda.api.hooks.ListenerAdapter;
 import net.dv8tion.jda.api.utils.FileUpload;
-import org.checkerframework.checker.nullness.qual.Nullable;
-import org.geotools.api.data.SimpleFeatureSource;
 import org.geotools.api.filter.Filter;
 import org.geotools.api.filter.FilterFactory;
 import org.geotools.api.filter.expression.PropertyName;
-import org.geotools.data.simple.SimpleFeatureIterator;
 import org.geotools.factory.CommonFactoryFinder;
 
 import javax.imageio.ImageIO;
@@ -27,9 +23,9 @@ import java.io.*;
 import java.util.*;
 import java.util.List;
 
-import static mochineko.java_discord_bot.util.DrawMapBuilder.EEW_MAP_FILE;
-
 public class EarthquakeCommand extends ListenerAdapter {
+
+    private static final FilterFactory filter_factory = CommonFactoryFinder.getFilterFactory();
 
     @Override
     public void onSlashCommandInteraction(SlashCommandInteractionEvent event) {
@@ -63,7 +59,6 @@ public class EarthquakeCommand extends ListenerAdapter {
 
                 new Thread(() -> {
                     long t = System.nanoTime();
-                    FilterFactory filter_factory = CommonFactoryFinder.getFilterFactory();
                     PropertyName nameProperty = filter_factory.property("regionname".trim());
                     Set<String> prefSet = new LinkedHashSet<>();
                     try {
@@ -178,7 +173,47 @@ public class EarthquakeCommand extends ListenerAdapter {
                     int scaleTo = area.getScaleTo();
                     embed.addField(name, arrivalTime + "," + scaleFrom + ":" + scaleTo, true);
                 }
-                channel.sendMessageEmbeds(embed.build()).queue();
+                event.replyEmbeds(embed.build()).queue();
+
+                new Thread(() -> {
+                    PropertyName nameProperty = filter_factory.property("name".trim());
+                    List<Filter> prefSet = new ArrayList<>();
+                    try {
+                        P2PEEWAPI api = P2PEEWAPI.getAPI()[1];
+                        var earthquake1 = api.getEarthquake();
+                        //var hy = earthquake1.getHypocenter();
+                        Map<EarthquakeScaleType, List<Filter>> drawColorMap = new HashMap<>();
+                        for (var area : api.getAreas()) {
+                            var name = area.getName();
+                            var fromScale = area.getScaleFrom();
+                            var toScale = area.getScaleTo();
+                            var fromConvertScale = EarthquakeScaleType.convertP2PAPI(fromScale);
+                            var toConvertScale = EarthquakeScaleType.convertP2PAPI(toScale);
+
+                            if (!drawColorMap.containsKey(fromConvertScale)) {
+                                drawColorMap.put(fromConvertScale, new ArrayList<>());
+                            }
+                            var drawFilter = drawColorMap.get(fromConvertScale);
+
+                            drawFilter.add(filter_factory.equals(nameProperty, filter_factory.literal(name)));
+                            prefSet.add(filter_factory.equals(nameProperty, filter_factory.literal(name)));
+                        }
+
+                        var map = DrawMapBuilder.createEEWMap(prefSet, drawColorMap, Color.BLACK, null);
+                        //map.addImage(new File("point.png"), hy.getLatitude(), hy.getLongitude());
+                        BufferedImage image = map.build();
+                        File file = new File("tsunami.png");
+                        ImageIO.write(image, "png", file);
+
+                        //ByteArrayOutputStream os = new ByteArrayOutputStream();
+                        //ImageIO.write(image, "png", os);
+                        //InputStream is = new ByteArrayInputStream(os.toByteArray());
+                        channel.sendFiles(FileUpload.fromData(file)).queue();
+                    } catch (IOException e) {
+                        throw new RuntimeException(e);
+                    }
+                }).start();
+
             }
         }
     }

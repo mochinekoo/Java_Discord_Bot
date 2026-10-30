@@ -1,9 +1,9 @@
 package mochineko.java_discord_bot.util;
 
+import mochineko.java_discord_bot.status.EarthquakeScaleType;
 import org.geotools.api.data.SimpleFeatureSource;
 import org.geotools.api.filter.Filter;
 import org.geotools.api.filter.FilterFactory;
-import org.geotools.data.simple.SimpleFeatureIterator;
 import org.geotools.factory.CommonFactoryFinder;
 import org.geotools.geometry.jts.ReferencedEnvelope;
 import org.geotools.map.Layer;
@@ -20,16 +20,19 @@ import java.util.Map;
 
 public class DrawMapBuilder {
 
-    public static final File EEW_MAP_FILE = new File(".\\src\\main\\resources\\GIS\\AreaForecastLocalM_prefecture_GIS\\府県予報区等.shp");
+    public static final File EEW_MAP_FILE = new File(".\\src\\main\\resources\\GIS\\AreaForecastLocalE_GIS\\地震情報_細分区域.shp");
+    public static final File PREF_MAP_FILE = new File(".\\src\\main\\resources\\GIS\\AreaForecastLocalM_prefecture_GIS\\府県予報区等.shp");
     public static final File TSUNAMI_MAP_FILE = new File(".\\src\\main\\resources\\GIS\\AreaTsunami_GIS\\津波予報区.shp");
     public static final File CITY_MAP_FILE = new File(".\\src\\main\\resources\\GIS\\AreaInformationCity_quake_GIS\\市町村等.shp");
 
     private static SimpleFeatureSource EEW_SOURCE;
+    private static SimpleFeatureSource PREF_SOURCE;
     private static SimpleFeatureSource CITY_SOURCE;
 
     public static void Init() {
         try {
-            EEW_SOURCE  = MapBuilder.getFileFeatureSource(EEW_MAP_FILE);
+            EEW_SOURCE = MapBuilder.getFileFeatureSource(EEW_MAP_FILE);
+            PREF_SOURCE = MapBuilder.getFileFeatureSource(PREF_MAP_FILE);
             CITY_SOURCE = MapBuilder.getFileFeatureSource(CITY_MAP_FILE);
 
         } catch (IOException e) {
@@ -37,9 +40,54 @@ public class DrawMapBuilder {
         }
     }
 
+    public static MapBuilder createEEWMap(List<Filter> draw_areaList, Map<EarthquakeScaleType, List<Filter>> draw_colormap, Color fill, Color stroke) {
+        var eewMap = new MapBuilder(EEW_SOURCE, 800, 600);
+
+        if (fill != null) {
+            if (draw_colormap == null) {
+                eewMap.addFill(fill, 1f, null);
+            }
+            else {
+                FilterFactory filter_factory = CommonFactoryFinder.getFilterFactory();
+                for (var entry : draw_colormap.entrySet()) {
+                    var color = entry.getKey().getColor();
+                    Filter orFilter = filter_factory.or(entry.getValue());
+                    eewMap.addFill(color, 1f, orFilter);
+                }
+            }
+        }
+
+        try {
+            List<ReferencedEnvelope> envelope_list = new ArrayList<>();
+            if (draw_areaList != null) {
+                for (Filter filter : draw_areaList) {
+                    ReferencedEnvelope area = MapBuilder.getAreaEnvelope(eewMap.getMapFeatureSource(), filter); //都道府県ごとのReferencedEnvelopeを取得する
+                    envelope_list.add(area); //都道府県ごとのReferencedEnvelopeを追加
+                    //eewMap.addFill(Color.WHITE, 1.0f, filter);
+                    //eewMap.addStroke(Color.BLACK, 1f, filter);
+                }
+                eewMap.setDrawArea(envelope_list); //描画範囲を決定する
+            }
+
+            var im = eewMap.getImage();
+            var gra = im.getGraphics();
+            var eewIm = eewMap.build();
+            File file = new File("eew1.png");
+
+            gra.drawImage(eewIm, 0, 0, null);
+            addCredit(im);
+
+            ImageIO.write(eewIm, "png", file);
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+
+        return eewMap;
+    }
+
     public static MapBuilder createCityMap(List<Filter> draw_areaList, Map<Color, List<Filter>> draw_colormap, Color fill, Color stroke) throws IOException {
         //府県予報区
-        var eewMap  = new MapBuilder(EEW_SOURCE, 800, 600);
+        var eewMap  = new MapBuilder(PREF_SOURCE, 800, 600);
         var cityMap = new MapBuilder(CITY_SOURCE, 800, 600);
         //cityMap.addStroke(Color.WHITE, 0.0f, null);
 
@@ -81,7 +129,7 @@ public class DrawMapBuilder {
 
     public static MapBuilder getPrefectureMap(List<Filter> draw_areaList, Map<Color, List<Filter>> draw_colormap, Color fill, Color stroke) throws IOException {
         //府県予報区
-        MapBuilder eew_map = new MapBuilder(EEW_MAP_FILE, 800, 600);
+        MapBuilder eew_map = new MapBuilder(PREF_MAP_FILE, 800, 600);
         if (fill != null) {
             if (draw_colormap == null) {
                 eew_map.addFill(fill, 1f, null);
@@ -138,8 +186,8 @@ public class DrawMapBuilder {
 
     public static void addCredit(BufferedImage bufferedImage) {
         final float STROKE_SIZE = 3.0f;
-        final int TEXT_SIZE = 30;
-        String creditText = "※気象庁「市町村等（地震津波関係）」「府県予報区」を\n加工して利用しています。";
+        final int TEXT_SIZE = 15;
+        String creditText = "※気象庁「地震情報_細分区域」を加工して利用しています。";
 
         Graphics2D graphics = (Graphics2D) bufferedImage.getGraphics();
 
@@ -150,7 +198,8 @@ public class DrawMapBuilder {
             String split = createSplit[i];
             Font font = new Font("SansSerif", Font.PLAIN, TEXT_SIZE);
             GlyphVector glyphVector = font.createGlyphVector(graphics.getFontRenderContext(), split);
-            Shape outlineShape = glyphVector.getOutline(bufferedImage.getWidth() - (TEXT_SIZE * split.length()), startY + (TEXT_SIZE * i));
+            //bufferedImage.getWidth() - (TEXT_SIZE * split.length())
+            Shape outlineShape = glyphVector.getOutline(10, startY + (TEXT_SIZE * i));
             graphics.setColor(Color.BLACK); //縁は黒色
             graphics.setStroke(new BasicStroke(STROKE_SIZE)); //ふち取りのサイズを決定する
             graphics.draw(outlineShape); //ふち取りのみを描画する
