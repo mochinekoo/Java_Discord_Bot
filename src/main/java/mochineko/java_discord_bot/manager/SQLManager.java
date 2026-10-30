@@ -14,7 +14,7 @@ import java.time.temporal.TemporalField;
 
 public class SQLManager {
 
-    private static final ConfigJson configJson = (ConfigJson) new JsonManager(FileType.CONFIG).getDeserializedJson();
+    private static final ConfigJson configJson = (ConfigJson) JsonManager.getInstance(FileType.CONFIG).getDeserializedJson();
 
     //SQL
     private Connection con;

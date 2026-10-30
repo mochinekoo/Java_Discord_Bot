@@ -32,7 +32,7 @@ public class OpenWeatherAPI {
     }
 
     public static OpenWeatherAPI getInstance(double lat, double lon) {
-        ConfigJson configJson = (ConfigJson) new JsonManager(FileType.CONFIG).getDeserializedJson();
+        ConfigJson configJson = (ConfigJson) JsonManager.getInstance(FileType.CONFIG).getDeserializedJson();
         JsonObject raw_json = NetworkUtil.getJson("https://api.openweathermap.org/data/2.5/forecast?lat=" + lat + "&lon=" + lon + "&appid=" + configJson.getWebAPISetting().getOpenWeatherAPI().getAPIKey() + "&lang=ja").getAsJsonObject();
         return gson.fromJson(raw_json, OpenWeatherAPI.class);
     }

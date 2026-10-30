@@ -14,15 +14,23 @@ import java.util.Map;
 
 public class JsonManager {
 
-    private static Map<FileType, JsonManager> memory_json_map = new HashMap<>();
+    public static final Gson gson = new GsonBuilder().setPrettyPrinting().create();
+    private static final Map<FileType, JsonManager> memory_json_map = new HashMap<>();
 
     private JsonElement raw_element;
     private final FileType type;
-    private final Gson gson;
 
-    public JsonManager(FileType type) {
+    private JsonManager(FileType type) {
         this.type = type;
-        this.gson = new GsonBuilder().setPrettyPrinting().create();
+    };
+
+    public static JsonManager getInstance(FileType type) {
+        if (!memory_json_map.containsKey(type)) {
+            var jsonManager = new JsonManager(type);
+            jsonManager.createJson();
+            memory_json_map.put(type, jsonManager);
+        }
+        return memory_json_map.get(type);
     }
 
     /**

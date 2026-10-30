@@ -47,11 +47,7 @@ public class Main extends ListenerAdapter {
     }
 
     public static void initBot() {
-        for (FileType fileType : FileType.values()) {
-            new JsonManager(fileType).createJson();
-        }
-
-        ConfigJson configJson = (ConfigJson) new JsonManager(FileType.CONFIG).getDeserializedJson();
+        ConfigJson configJson = (ConfigJson) JsonManager.getInstance(FileType.CONFIG).getDeserializedJson();
         jda = JDABuilder.createDefault(configJson.getBotSetting().getToken())
                 .addEventListeners(new Main())
                 .addEventListeners(new MusicCommand())
@@ -90,8 +86,7 @@ public class Main extends ListenerAdapter {
     }
 
     public static void startEarthquakeService() {
-        JsonManager jsonManager = new JsonManager(FileType.CONFIG);
-        ConfigJson configJson = (ConfigJson) jsonManager.getDeserializedJson();
+        ConfigJson configJson = (ConfigJson) JsonManager.getInstance(FileType.CONFIG).getDeserializedJson();
         ConfigJson.Earthquake earthquakeConfig = configJson.getEarthquake();
         String sendChannelID = earthquakeConfig.getSendChannelID();
 

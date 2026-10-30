@@ -47,7 +47,7 @@ public class YoutubeDataAPI {
     }
 
     public static YoutubeDataAPI getInstance() {
-        ConfigJson json = (ConfigJson) new JsonManager(FileType.CONFIG).getDeserializedJson();
+        ConfigJson json = (ConfigJson) JsonManager.getInstance(FileType.CONFIG).getDeserializedJson();
         ConfigJson.WebAPI.YoutubeDataAPI youtubeAPI = json.getWebAPISetting().getYoutubeDataAPISetting();
         JsonElement youtubeJson = NetworkUtil.getJson(URL.formatted(youtubeAPI.getAPIKey(), youtubeAPI.getChannelID()));
         return new Gson().fromJson(youtubeJson, YoutubeDataAPI.class);
