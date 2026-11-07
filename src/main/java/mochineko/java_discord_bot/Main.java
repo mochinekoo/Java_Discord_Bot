@@ -6,7 +6,6 @@ import mochineko.java_discord_bot.api.P2PEarthquakeAPI;
 import mochineko.java_discord_bot.commands.*;
 import mochineko.java_discord_bot.listener.ButtonListener;
 import mochineko.java_discord_bot.manager.json.ConfigJson;
-import mochineko.java_discord_bot.manager.json.DeserializedJson;
 import mochineko.java_discord_bot.manager.json.JsonManager;
 import mochineko.java_discord_bot.status.EarthquakeScaleType;
 import mochineko.java_discord_bot.status.FileType;
@@ -20,10 +19,7 @@ import net.dv8tion.jda.api.interactions.commands.OptionType;
 import net.dv8tion.jda.api.interactions.commands.build.Commands;
 import org.slf4j.LoggerFactory;
 
-import java.io.IOException;
 import java.net.http.WebSocket;
-import java.nio.ByteBuffer;
-import java.sql.SQLException;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletionStage;
@@ -91,24 +87,26 @@ public class Main extends ListenerAdapter {
         String sendChannelID = earthquakeConfig.getSendChannelID();
 
         P2PEarthquakeAPI.startWebSockAPI(new WebSocket.Listener() {
+            final int duration = 5;
             @Override
             public void onOpen(WebSocket webSocket) {
-                webSocket.request(1);
+                webSocket.request(duration);
                 logger.info("地震速報APIの接続に成功しました");
             }
             @Override
             public CompletionStage<?> onClose(WebSocket webSocket, int statusCode, String reason) {
+                webSocket.request(duration);
                 logger.warning("接続に閉じられました：" + statusCode + "(" + reason + ")");
                 return null;
             }
             @Override
             public void onError(WebSocket webSocket, Throwable error) {
-                webSocket.request(1);
+                webSocket.request(duration);
                 logger.warning("APIの接続に問題が発生しました：" + error);
             }
             @Override
             public CompletionStage<?> onText(WebSocket webSocket, CharSequence data, boolean last) {
-                webSocket.request(1);
+                webSocket.request(duration);
                 P2PEarthquakeAPI api = gson.fromJson(data.toString(), P2PEarthquakeAPI.class);
 
                 logger.info("地震速報APIからの受信データ: " + data.toString());
@@ -124,30 +122,24 @@ public class Main extends ListenerAdapter {
                 }
 
                 TextChannel channel = jda.getTextChannelById(sendChannelID);
-                channel.sendMessage(data.toString()).queue();
+                // channel.sendMessage(data.toString()).queue(); // 生データ
 
-                EmbedBuilder embed = new EmbedBuilder();
-                embed.addField("発生時刻", api.getTime(), false);
-                for (Map.Entry<EarthquakeScaleType, List<P2PEarthquakeAPI.Point>> entry : api.getScaleMap().entrySet()) {
-                    EarthquakeScaleType scaleType = entry.getKey();
-                    List<String> pointAddr = entry.getValue().stream().map(P2PEarthquakeAPI.Point::getAddr).toList();
-                    String pointText = String.join(",", pointAddr);
-                    embed.addField(scaleType.getName(), pointText, true);
-                }
+                EmbedBuilder embed = P2PEarthquakeAPI.createScalePrefMapEmbed(api, "地震情報");
                 channel.sendMessageEmbeds(embed.build()).queue();
                 return null;
             }
         });
 
         P2PEEWAPI.startWebSockAPI(new WebSocket.Listener() {
+            final int duration = 1;
             @Override
             public void onOpen(WebSocket webSocket) {
-                webSocket.request(10);
+                webSocket.request(duration);
                 System.out.println("緊急地震速報のAPIに接続されました。");
             }
             @Override
             public CompletionStage<?> onText(WebSocket webSocket, CharSequence data, boolean last) {
-                webSocket.request(5);
+                webSocket.request(duration);
                 logger.info("緊急地震速報APIからの受信データ: " + data.toString());
                 if (sendChannelID == null || sendChannelID.isEmpty()) {
                     logger.warning("IDが設定されていません");

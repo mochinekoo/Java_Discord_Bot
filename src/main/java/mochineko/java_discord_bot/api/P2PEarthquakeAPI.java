@@ -3,6 +3,7 @@ package mochineko.java_discord_bot.api;
 import com.google.gson.Gson;
 import mochineko.java_discord_bot.Main;
 import mochineko.java_discord_bot.status.EarthquakeScaleType;
+import net.dv8tion.jda.api.EmbedBuilder;
 import org.jetbrains.annotations.Nullable;
 
 import javax.net.ssl.HttpsURLConnection;
@@ -74,6 +75,10 @@ public class P2PEarthquakeAPI {
         return points;
     }
 
+    /**
+     * 震度ごとの観測地点のデータです。
+     * @return {@link Map} で返します。
+     */
     public Map<EarthquakeScaleType, List<Point>> getScaleMap() {
         Map<EarthquakeScaleType, List<Point>> map = new TreeMap<>(Comparator.comparingInt(EarthquakeScaleType::getP2PRawData));
         for (Point point : points) {
@@ -84,6 +89,62 @@ public class P2PEarthquakeAPI {
             list.add(point);
         }
         return map;
+    }
+
+    /**
+     * 震度ごと+都道府県ごとのデータです。
+     * @return {@link Map} で返します。
+     */
+    public Map<EarthquakeScaleType, Map<String, List<Point>>> getScalePrefMap() {
+        Map<EarthquakeScaleType, Map<String, List<Point>>> map = new TreeMap<>(Comparator.comparingInt(EarthquakeScaleType::getP2PRawData).reversed());
+
+        var scaleMap = getScaleMap();
+        for (var entry : scaleMap.entrySet()) {
+            var scale = entry.getKey();
+            if (!map.containsKey(scale)) {
+                map.put(scale, new TreeMap<>());
+            }
+            var pointList = entry.getValue();
+            for (var point : pointList) {
+                var prefMapData = map.get(scale);
+                var pref = point.getPref();
+                if (!prefMapData.containsKey(pref)) {
+                    prefMapData.put(pref, new ArrayList<>());
+                }
+                var prefPointData = prefMapData.get(pref);
+                prefPointData.add(point);
+            }
+        }
+        return map;
+    }
+
+    /**
+     * 震度ごと+都道府県ごとのデータを、Discordの形式（Embed）として返す関数
+     * @return
+     */
+    public static EmbedBuilder createScalePrefMapEmbed(P2PEarthquakeAPI api, String title) {
+        EmbedBuilder embed = new EmbedBuilder();
+        if (title != null) {
+            embed.setTitle(title);
+        }
+        embed.addField("発生時刻", api.earthquake.getTime(), false);
+        for (var scalePrefEntry : api.getScalePrefMap().entrySet()) {
+            EarthquakeScaleType scaleType = scalePrefEntry.getKey();
+            var value = scalePrefEntry.getValue();
+
+            StringBuilder builder = new StringBuilder();
+            for (var prefPointEntry : value.entrySet()) {
+                var pref = prefPointEntry.getKey();
+                builder.append("<" + pref + ">");
+                var pointList = prefPointEntry.getValue();
+                List<String> pointAddr = pointList.stream().map(P2PEarthquakeAPI.Point::getAddr).toList();  // 観測地点だけに
+                String pointText = String.join(",", pointAddr); // ,区切り
+                builder.append(pointText);
+            }
+            embed.addField(scaleType.getName(), builder.toString(), true);
+        }
+
+        return embed;
     }
 
     public String getTime() {

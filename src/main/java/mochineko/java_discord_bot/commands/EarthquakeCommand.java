@@ -46,15 +46,7 @@ public class EarthquakeCommand extends ListenerAdapter {
                 P2PEarthquakeAPI.Earthquake earthquake = earthquakeAPI.getEarthquake();
                 var scalePointMap = earthquakeAPI.getScaleMap();
 
-                embed.setTitle("過去の地震情報");
-                embed.addField("発生時刻", earthquake.getTime(), false);
-                for (Map.Entry<EarthquakeScaleType, List<P2PEarthquakeAPI.Point>> entry : scalePointMap.entrySet()) {
-                    EarthquakeScaleType scaleType = entry.getKey();
-                    List<String> pointAddr = entry.getValue().stream().map(P2PEarthquakeAPI.Point::getAddr).toList();
-                    String pointText = String.join(",", pointAddr);
-                    embed.addField(scaleType.getName(), pointText, true);
-                }
-                embed.setColor(Color.GREEN);
+                embed = P2PEarthquakeAPI.createScalePrefMapEmbed(earthquakeAPI, "過去の地震情報");
                 event.replyEmbeds(embed.build()).queue();
 
                 new Thread(() -> {
