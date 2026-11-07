@@ -122,12 +122,16 @@ public class P2PEarthquakeAPI {
      * 震度ごと+都道府県ごとのデータを、Discordの形式（Embed）として返す関数
      * @return
      */
-    public static EmbedBuilder createScalePrefMapEmbed(P2PEarthquakeAPI api, String title) {
+    public static List<EmbedBuilder> createScalePrefMapEmbed(P2PEarthquakeAPI api, String title) {
+        List<EmbedBuilder> embedList = new ArrayList<>();
+
         EmbedBuilder embed = new EmbedBuilder();
+
         if (title != null) {
             embed.setTitle(title);
         }
         embed.addField("発生時刻", api.earthquake.getTime(), false);
+
         for (var scalePrefEntry : api.getScalePrefMap().entrySet()) {
             EarthquakeScaleType scaleType = scalePrefEntry.getKey();
             var value = scalePrefEntry.getValue();
@@ -138,13 +142,32 @@ public class P2PEarthquakeAPI {
                 builder.append("<" + pref + ">");
                 var pointList = prefPointEntry.getValue();
                 List<String> pointAddr = pointList.stream().map(P2PEarthquakeAPI.Point::getAddr).toList();  // 観測地点だけに
-                String pointText = String.join(",", pointAddr); // ,区切り
-                builder.append(pointText);
+
+                for (String addr : pointAddr) {
+                    builder.append(addr).append(",");
+
+                    if (builder.length() >= 1024) {
+                        Main.logger.info(String.valueOf(builder.length()) + ":" + builder.toString());
+                        builder.delete(builder.length() - 1 - addr.length(), builder.length());
+                        Main.logger.info(String.valueOf(builder.length()));
+                        embed.addField(scaleType.getName(), builder.toString(), true);
+                        builder = new StringBuilder();
+                        embedList.add(embed);
+                        embed = new EmbedBuilder();
+                        if (title != null) {
+                            embed.setTitle(title + "(続き)");
+                        }
+                        builder.append("<" + pref +">" + addr).append(",");
+                    }
+                }
+
+                builder.append("\n");
             }
             embed.addField(scaleType.getName(), builder.toString(), true);
         }
 
-        return embed;
+        embedList.add(embed);
+        return embedList;
     }
 
     public String getTime() {

@@ -34,9 +34,9 @@ public class EarthquakeCommand extends ListenerAdapter {
         P2PEarthquakeAPI[] earthquakeAPIList = P2PEarthquakeAPI.GetAPI();
 
         if ("history_earthquake".equalsIgnoreCase(cmd)) {
-            P2PEarthquakeAPI earthquakeAPI = earthquakeAPIList[0];
-            EmbedBuilder embed = new EmbedBuilder();
+            P2PEarthquakeAPI earthquakeAPI = earthquakeAPIList[2];
             if (earthquakeAPI == null) {
+                EmbedBuilder embed = new EmbedBuilder();
                 embed.setTitle("エラー");
                 embed.addField("", "地震情報の取得に失敗しました", true);
                 embed.setColor(Color.RED);
@@ -46,8 +46,10 @@ public class EarthquakeCommand extends ListenerAdapter {
                 P2PEarthquakeAPI.Earthquake earthquake = earthquakeAPI.getEarthquake();
                 var scalePointMap = earthquakeAPI.getScaleMap();
 
-                embed = P2PEarthquakeAPI.createScalePrefMapEmbed(earthquakeAPI, "過去の地震情報");
-                event.replyEmbeds(embed.build()).queue();
+                List<EmbedBuilder> embedList = P2PEarthquakeAPI.createScalePrefMapEmbed(earthquakeAPI, "過去の地震情報");
+                for (var embed : embedList) {
+                    channel.sendMessageEmbeds(embed.build()).queue();
+                }
 
                 new Thread(() -> {
                     long t = System.nanoTime();

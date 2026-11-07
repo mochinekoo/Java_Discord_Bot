@@ -91,41 +91,42 @@ public class Main extends ListenerAdapter {
             @Override
             public void onOpen(WebSocket webSocket) {
                 webSocket.request(duration);
-                logger.info("地震速報APIの接続に成功しました");
+                logger.info("[Earthquake] 地震速報APIの接続に成功しました");
             }
             @Override
             public CompletionStage<?> onClose(WebSocket webSocket, int statusCode, String reason) {
                 webSocket.request(duration);
-                logger.warning("接続に閉じられました：" + statusCode + "(" + reason + ")");
+                logger.warning("[Earthquake] 接続に閉じられました：" + statusCode + "(" + reason + ")");
                 return null;
             }
             @Override
             public void onError(WebSocket webSocket, Throwable error) {
                 webSocket.request(duration);
-                logger.warning("APIの接続に問題が発生しました：" + error);
+                logger.warning("[Earthquake] APIの接続に問題が発生しました：" + error);
             }
             @Override
             public CompletionStage<?> onText(WebSocket webSocket, CharSequence data, boolean last) {
                 webSocket.request(duration);
                 P2PEarthquakeAPI api = gson.fromJson(data.toString(), P2PEarthquakeAPI.class);
 
-                logger.info("地震速報APIからの受信データ: " + data.toString());
-                logger.info("送信するチャンネル：" + sendChannelID);
+                logger.info("[Earthquake] 地震速報APIからの受信データ: " + data.toString());
+                logger.info("[Earthquake] 送信するチャンネル：" + sendChannelID);
 
                 if (sendChannelID == null || sendChannelID.isEmpty()) {
-                    logger.warning("IDが設定されていません");
+                    logger.warning("[Earthquake] IDが設定されていません");
                     return null;
                 }
                 if (api.getCode() == 555 || api.getCode() == 561 || api.getCode() == 9611) {
-                    logger.warning("受信対象外なため、サーバーには送られません：" + api.getCode());
+                    logger.warning("[Earthquake] 受信対象外なため、サーバーには送られません：" + api.getCode());
                     return null;
                 }
 
                 TextChannel channel = jda.getTextChannelById(sendChannelID);
                 // channel.sendMessage(data.toString()).queue(); // 生データ
 
-                EmbedBuilder embed = P2PEarthquakeAPI.createScalePrefMapEmbed(api, "地震情報");
-                channel.sendMessageEmbeds(embed.build()).queue();
+                for (var embed : P2PEarthquakeAPI.createScalePrefMapEmbed(api, "地震情報")) {
+                    channel.sendMessageEmbeds(embed.build()).queue();
+                }
                 return null;
             }
         });
@@ -135,14 +136,20 @@ public class Main extends ListenerAdapter {
             @Override
             public void onOpen(WebSocket webSocket) {
                 webSocket.request(duration);
-                System.out.println("緊急地震速報のAPIに接続されました。");
+                System.out.println("[EEW] 緊急地震速報のAPIに接続されました。");
+            }
+            @Override
+            public void onError(WebSocket webSocket, Throwable error) {
+                webSocket.request(duration);
+                logger.warning("[EEW] APIの接続に問題が発生しました：" + error);
             }
             @Override
             public CompletionStage<?> onText(WebSocket webSocket, CharSequence data, boolean last) {
                 webSocket.request(duration);
-                logger.info("緊急地震速報APIからの受信データ: " + data.toString());
-                if (sendChannelID == null || sendChannelID.isEmpty()) {
+                logger.info("[EEW] 緊急地震速報APIからの受信データ: " + data.toString());
+                if (sendChannelID == null) {
                     logger.warning("IDが設定されていません");
+                    return null;
                 }
                 TextChannel channel = jda.getTextChannelById(sendChannelID);
                 P2PEEWAPI api = gson.fromJson(data.toString(), P2PEEWAPI.class);
