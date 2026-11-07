@@ -146,7 +146,7 @@ public class EarthquakeCommand extends ListenerAdapter {
                 channel.sendMessageEmbeds(embed.build()).queue();
             }
             else {
-                P2PEEWAPI eewapi = eewAPIList[1];
+                P2PEEWAPI eewapi = eewAPIList[0];
                 var earthquake = eewapi.getEarthquake();
                 if (earthquake != null) {
                     var earthquakeArrivalTime = earthquake.getArrivalTime();
@@ -158,7 +158,7 @@ public class EarthquakeCommand extends ListenerAdapter {
                 }
 
                 var areaList = eewapi.getAreas();
-                for (int i = 0; i < 20; i++) {
+                for (int i = 0; i < 5; i++) {
                     var area = areaList[i];
                     String name = area.getName();
                     String arrivalTime = area.getArrivalTime();
@@ -172,31 +172,35 @@ public class EarthquakeCommand extends ListenerAdapter {
                     PropertyName nameProperty = filter_factory.property("name".trim());
                     List<Filter> prefSet = new ArrayList<>();
                     try {
-                        P2PEEWAPI api = P2PEEWAPI.getAPI()[1];
+                        P2PEEWAPI api = P2PEEWAPI.getAPI()[0];
                         var earthquake1 = api.getEarthquake();
-                        //var hy = earthquake1.getHypocenter();
+                        var hy = earthquake1.getHypocenter();
                         Map<Color, List<Filter>> drawColorMap = new HashMap<>();
                         for (var area : api.getAreas()) {
                             var name = area.getName();
+                            var pref = area.getPref();
                             var fromScale = area.getScaleFrom();
                             var toScale = area.getScaleTo();
                             var fromConvertScale = EarthquakeScaleType.convertP2PAPI(fromScale);
                             var toConvertScale = EarthquakeScaleType.convertP2PAPI(toScale);
 
-                            if (!drawColorMap.containsKey(fromConvertScale.getColor())) {
-                                drawColorMap.put(fromConvertScale.getColor(), new ArrayList<>());
+                            ///
+                            /// ブレ幅で誤った認識になる可能性があるため、同じ色で塗る
+                            ///
+                            if (!drawColorMap.containsKey(Color.YELLOW)) {
+                                // drawColorMap.put(fromConvertScale.getColor(), new ArrayList<>());
+                                drawColorMap.put(Color.YELLOW, new ArrayList<>());
                             }
-                            var drawFilter = drawColorMap.get(fromConvertScale.getColor());
-
+                            // var drawFilter = drawColorMap.get(fromConvertScale.getColor());
+                            var drawFilter = drawColorMap.get(Color.YELLOW);
                             drawFilter.add(filter_factory.equals(nameProperty, filter_factory.literal(name)));
-                            prefSet.add(filter_factory.equals(nameProperty, filter_factory.literal(name)));
+                            prefSet.add(filter_factory.equals(nameProperty, filter_factory.literal(pref)));
                         }
 
-                        var map = DrawMapBuilder.createEEWMap(prefSet, drawColorMap);
+                        var map = DrawMapBuilder.createEEWMap(prefSet, drawColorMap, hy.getLatitude(), hy.getLongitude());
                         //map.addImage(new File("point.png"), hy.getLatitude(), hy.getLongitude());
-                        BufferedImage image = map.build();
-                        File file = new File("tsunami.png");
-                        ImageIO.write(image, "png", file);
+                        File file = new File("eew1.png");
+                        ImageIO.write(map, "png", file);
 
                         //ByteArrayOutputStream os = new ByteArrayOutputStream();
                         //ImageIO.write(image, "png", os);

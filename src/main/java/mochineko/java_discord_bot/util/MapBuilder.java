@@ -243,10 +243,9 @@ public class MapBuilder {
         return source.getBounds();
     }
 
-    public static void addCredit(BufferedImage bufferedImage) {
+    public static void addCredit(BufferedImage bufferedImage, String creditText) {
         final float STROKE_SIZE = 3.0f;
         final int TEXT_SIZE = 15;
-        String creditText = "※気象庁「地震情報_細分区域」を加工して利用しています。";
 
         Graphics2D graphics = (Graphics2D) bufferedImage.getGraphics();
 
@@ -259,6 +258,7 @@ public class MapBuilder {
             GlyphVector glyphVector = font.createGlyphVector(graphics.getFontRenderContext(), split);
             //bufferedImage.getWidth() - (TEXT_SIZE * split.length())
             Shape outlineShape = glyphVector.getOutline(10, startY + (TEXT_SIZE * i));
+            graphics.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
             graphics.setColor(Color.BLACK); //縁は黒色
             graphics.setStroke(new BasicStroke(STROKE_SIZE)); //ふち取りのサイズを決定する
             graphics.draw(outlineShape); //ふち取りのみを描画する
