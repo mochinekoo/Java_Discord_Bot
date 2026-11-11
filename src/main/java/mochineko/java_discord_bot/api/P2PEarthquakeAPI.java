@@ -3,9 +3,12 @@ package mochineko.java_discord_bot.api;
 import com.google.gson.Gson;
 import mochineko.java_discord_bot.Main;
 import mochineko.java_discord_bot.status.EarthquakeScaleType;
+import mochineko.java_discord_bot.status.JmaEarthquakeCorrectType;
+import mochineko.java_discord_bot.status.JmaEarthquakeIssueType;
 import net.dv8tion.jda.api.EmbedBuilder;
 import org.jetbrains.annotations.Nullable;
 
+import javax.annotation.Nonnull;
 import javax.net.ssl.HttpsURLConnection;
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -13,8 +16,6 @@ import java.io.InputStreamReader;
 import java.net.URI;
 import java.net.URL;
 import java.net.http.HttpClient;
-import java.net.http.HttpRequest;
-import java.net.http.HttpResponse;
 import java.net.http.WebSocket;
 import java.nio.charset.StandardCharsets;
 import java.time.LocalDateTime;
@@ -22,8 +23,6 @@ import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeFormatterBuilder;
 import java.time.temporal.ChronoField;
 import java.util.*;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ExecutionException;
 
 public class P2PEarthquakeAPI {
 
@@ -31,10 +30,12 @@ public class P2PEarthquakeAPI {
     private static final HttpClient httpClient = HttpClient.newHttpClient();
 
     private Earthquake earthquake;
+    private Issue issue;
     private Point[] points;
     private String time;
     private int code;
 
+    @Nullable
     public static P2PEarthquakeAPI[] GetAPI() {
         try {
             URL url = new URL("https://api.p2pquake.net/v2/history?codes=551");
@@ -67,10 +68,16 @@ public class P2PEarthquakeAPI {
                 });
     }
 
+    @Nonnull
     public Earthquake getEarthquake() {
         return earthquake;
     }
 
+    /**
+     * 震度観測点の情報を返す関数
+     * @return {@link Point} で返す。
+     */
+    @Nullable
     public Point[] getPoints() {
         return points;
     }
@@ -79,6 +86,7 @@ public class P2PEarthquakeAPI {
      * 震度ごとの観測地点のデータです。
      * @return {@link Map} で返します。
      */
+    @Nullable
     public Map<EarthquakeScaleType, List<Point>> getScaleMap() {
         Map<EarthquakeScaleType, List<Point>> map = new TreeMap<>(Comparator.comparingInt(EarthquakeScaleType::getP2PRawData));
         for (Point point : points) {
@@ -95,6 +103,7 @@ public class P2PEarthquakeAPI {
      * 震度ごと+都道府県ごとのデータです。
      * @return {@link Map} で返します。
      */
+    @Nullable
     public Map<EarthquakeScaleType, Map<String, List<Point>>> getScalePrefMap() {
         Map<EarthquakeScaleType, Map<String, List<Point>>> map = new TreeMap<>(Comparator.comparingInt(EarthquakeScaleType::getP2PRawData).reversed());
 
@@ -122,6 +131,7 @@ public class P2PEarthquakeAPI {
      * 震度ごと+都道府県ごとのデータを、Discordの形式（Embed）として返す関数
      * @return
      */
+    @Nullable
     public static List<EmbedBuilder> createScalePrefMapEmbed(P2PEarthquakeAPI api, String title) {
         List<EmbedBuilder> embedList = new ArrayList<>();
 
@@ -175,12 +185,56 @@ public class P2PEarthquakeAPI {
     }
     public int getCode() { return code; }
 
+    @Nonnull
+    public Issue getIssue() { return issue; }
+
     public LocalDateTime getLocalDateTime() {
         DateTimeFormatter formatter = new DateTimeFormatterBuilder()
                 .appendPattern("yyyy/MM/dd HH:mm:ss")
                 .appendFraction(ChronoField.NANO_OF_SECOND, 2, 3, true)
                 .toFormatter();
         return LocalDateTime.parse(time, formatter);
+    }
+
+    public static class Issue {
+        private String source;
+        private String time;
+        private String type;
+        private String correct;
+
+        /**
+         *　情報の発表元
+         */
+        @Nullable
+        public String getSource() {
+            return source;
+        }
+
+        /**
+         * 情報の発表時間
+         * @return {@link String} で返す
+         */
+        @Nonnull
+        public String getRawTime() {
+            return time;
+        }
+
+        /**
+         * 発表の種類
+         * @return {@link JmaEarthquakeIssueType} で返す。
+         */
+        @Nonnull
+        public JmaEarthquakeIssueType getIssueType() {
+            return JmaEarthquakeIssueType.convertP2PAPI(type);
+        }
+
+        /**
+         * 訂正の有無
+         * @return {@link JmaEarthquakeIssueType} で返す
+         */
+        public JmaEarthquakeCorrectType getCorrectType() {
+            return JmaEarthquakeCorrectType.convertP2PAPI(correct);
+        }
     }
 
     public static class Earthquake {
@@ -193,6 +247,7 @@ public class P2PEarthquakeAPI {
         /**
          * 国内への津波の有無を返す関数
          */
+        @Nullable
         public String getDomesticTsunami() {
             return domesticTsunami;
         }
@@ -200,10 +255,12 @@ public class P2PEarthquakeAPI {
         /**
          * 海外での津波の有無を返す関数
          */
+        @Nullable
         public String getForeignTsunami() {
             return foreignTsunami;
         }
 
+        @Nullable
         public Hypocenter getHypocenter() {
             return hypocenter;
         }
@@ -212,6 +269,7 @@ public class P2PEarthquakeAPI {
          * 最大震度を返す関数。
          * @apiNote 震度情報が存在しない場合は、-1を返す。
          */
+        @Nullable
         public int getMaxScale() {
             return maxScale;
         }
@@ -227,10 +285,12 @@ public class P2PEarthquakeAPI {
         /**
          * 地震の発生時刻
          */
+        @Nullable
         public String getTime() {
             return time;
         }
 
+        @Nullable
         public LocalDateTime getDateTime() {
             DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy/MM/dd HH:mm:ss");
             return LocalDateTime.parse(time, formatter);
@@ -245,6 +305,7 @@ public class P2PEarthquakeAPI {
 
             /**
              * 深さを返す関数
+             * @return int型で返し、震源情報が存在しない場合は-1を返す。ごく浅いは0。
              */
             public int getDepth() {
                 return depth;
@@ -252,6 +313,7 @@ public class P2PEarthquakeAPI {
 
             /**
              * 緯度を返す関数
+             * @return float型で返し、震源情報が存在しない場合は-200を返す
              */
             public float getLatitude() {
                 return latitude;
@@ -259,6 +321,7 @@ public class P2PEarthquakeAPI {
 
             /**
              * 経度を返す関数
+             * @return float型で返し、震源情報が存在しない場合は-200を返す
              */
             public float getLongitude() {
                 return longitude;
@@ -266,6 +329,7 @@ public class P2PEarthquakeAPI {
 
             /**
              *　マグニチュードを返す関数
+             * @return float型で返し、震源情報が存在しない場合は-1を返す
              */
             public float getMagnitude() {
                 return magnitude;
